@@ -121,22 +121,22 @@ class DB2S3
     def ensure_connected
       return if @connected
       AWS::S3::Base.establish_connection!(DB2S3::Config::S3.slice(:access_key_id, :secret_access_key).merge(:use_ssl => true))
-      AWS::S3::Bucket.create(bucket)
+      AWS::S3::Bucket.find(bucket)
       @connected = true
     end
 
     def store(file_name, file)
       ensure_connected
-      AWS::S3::S3Object.store(file_name, file, bucket)
+      AWS::S3::S3Object.store(File.join('database_backup',file_name), file, bucket)
     end
 
     def fetch(file_name)
       ensure_connected
-      AWS::S3::S3Object.find(file_name, bucket)
+      AWS::S3::S3Object.find(File.join('database_backup',file_name), bucket)
 
       file = Tempfile.new("dump")
       open(file.path, 'w') do |f|
-        AWS::S3::S3Object.stream(file_name, bucket) do |chunk|
+        AWS::S3::S3Object.stream(File.join('database_backup',file_name), bucket) do |chunk|
           f.write chunk
         end
       end
@@ -149,7 +149,7 @@ class DB2S3
     end
 
     def delete(file_name)
-      if object = AWS::S3::S3Object.find(file_name, bucket)
+      if object = AWS::S3::S3Object.find(File.join('database_backup',file_name), bucket)
         object.delete
       end
     end
